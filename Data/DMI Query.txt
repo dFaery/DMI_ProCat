@@ -1,0 +1,156 @@
+-- ===================================================================
+
+-- Gunakan transaction untuk sign up
+-- Perbaikan: Gunakan LEFT JOIN agar data user tetap muncul meskipun 
+   sales_id-nya kosong.
+
+-- ===================================================================
+
+-- Sign-up (customer)
+-- 1) Periksa apakah email sudah terdaftar (two-way binding).
+-- 2) Masukkan data yang diminta. 
+-- 3) User menunggu persetujuan admin sebelum bisa menggunakan akun.
+
+SELECT COUNT(*) 
+FROM user 
+WHERE email = ?
+
+INSERT INTO user (email, username, password, user_level)
+VALUES (?, ?, ?, ?)
+
+INSERT INTO customer (user_email, nama, alamat, kota, nik) 
+VALUES (?, ?, ?, ?, ?)
+
+INSERT INTO membership (user_email) 
+VALUES (?)
+
+-- Customer Sign-up Approval (admin)
+-- 1) Ambil semua data akun yang field 'approved_at' nya null.
+-- 2) Update field 'approved_at' dan 'approved_by'.
+
+SELECT email, username 
+FROM user 
+WHERE approved_by IS NULL
+
+UPDATE user 
+SET approved_by = ?, approved_at = ? 
+WHERE email = ?
+
+-- Admin Registration (admin)
+-- 1) Periksa apakah email sudah terdaftar (two-way binding).
+-- 2) Masukkan data yang diminta. 
+
+SELECT COUNT(*) 
+FROM user 
+WHERE email = ?
+
+INSERT INTO user (email, username, password, approved_by, approved_at, user_level)
+VALUES (?, ?, ?, ?, ?, ?)
+
+-- ===================================================================
+
+-- Log In
+-- 1) Masukkan email dan password.
+-- 2) Kirim perintah query. 
+-- 3) Jika data ditemukan, kembalikan field yang relevan. Jika tidak, 
+      tampilkan pesan error.
+
+SELECT u.username, u.user_level_id, l.nama
+FROM user u 
+INNER JOIN user_level l ON (u.user_level_id = l.id)
+WHERE u.email = ? AND u.password = ? AND u.approved_by IS NOT NULL
+
+-- ===================================================================
+
+-- Menampilkan semua item (customer)
+
+SELECT id, nama, harga, gambar 
+FROM item 
+WHERE ditampilkan = 1
+
+-- Melihat detail item
+
+SELECT nama, harga, gambar, tinggi, lebar, panjang, satuan_produk, isi, satuan_item
+FROM item 
+WHERE id = ?
+
+-- Menampilkan semua item yang disimpan (customer)
+
+SELECT i.id, i.nama, i.harga, i.gambar 
+FROM item i 
+INNER JOIN simpan s ON (i.id = s.item_id) 
+WHERE s.user_id = ? AND i.ditampilkan = 1
+
+-- Menyimpan item (customer)
+
+INSERT INTO simpan (item_id, user_email)
+VALUES (?, ?)
+
+-- Membuang item (customer)
+
+DELETE FROM simpan 
+WHERE item_id = ? AND user_email = ?
+
+-- Menampilkan semua item (admin)
+
+SELECT id, nama, harga, gambar, ditampilkan
+FROM item 
+WHERE ditampilkan = 1
+
+-- Update untuk menampilkan atau menyembunyikan item (admin)
+
+UPDATE item 
+SET ditampilkan = ? 
+WHERE id = ?
+
+-- ===================================================================
+
+-- Melihat profil (customer)
+
+SELECT nama, alamat, kota, nik 
+FROM customer
+WHERE user_email = ?
+
+-- Melihat membership
+
+SELECT poin, status, pembelian_terakhir 
+FROM membership 
+WHERE user_email = ?
+
+-- Melihat daftar customer (admin)
+
+SELECT nama, kota
+FROM customer
+
+-- Melihat detail customer (admin)
+
+SELECT nama, alamat, kota, nik, deskripsi 
+FROM customer
+WHERE user_email = ?
+
+-- Melihat permintaan sign up (admin)
+
+SELECT u.username, u.email
+FROM user u
+WHERE approved_by IS NULL
+
+-- Melihat daftar akun yang sudah terdaftar (admin)
+
+SELECT u.username, u.email
+FROM user u
+WHERE approved_by IS NOT NULL
+
+-- Melihat detail akun (admin)
+
+SELECT u.username, u.email, u.approved_by, u.approved_at, l.nama, s.nama
+FROM user u
+INNER JOIN user_level l ON (u.user_level_id = l.id)
+INNER JOIN sales s ON (u.sales_id = s.id)
+WHERE approved_by IS NOT NULL AND email = ?
+
+-- ===================================================================
+
+-- Mencatat log user
+
+INSERT INTO user_log (time, message, user_email)
+VALUES (?, ?, ?)
